@@ -3,20 +3,28 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime, timedelta
 import os
+from streamlit_calendar import calendar
 
-st.set_page_config(page_title="Resource Monitoring & Insights", layout="wide")
-st.title("📊 Resource Monitoring with Non-Availability and GPT Insights")
+st.set_page_config(page_title="Resource Monitor Enhanced", layout="wide")
+st.title("📊 Resource Monitoring with Non-Availability + Calendar + GPT")
 
+# Sidebar upload and user selection
 uploaded_file = st.sidebar.file_uploader("Upload JIRA Excel", type=["xlsx"])
 resources = ["Alice", "Bob", "Charlie", "Diana"]
 user = st.sidebar.selectbox("Select Resource", resources)
 
-# Log non-availability
-st.subheader("🛠️ Log Non-Availability")
+# --- Manual Entry with Persistent Time Input ---
+st.subheader("🛠️ Log Non-Availability with Start/End Time")
+if "start_time" not in st.session_state:
+    st.session_state["start_time"] = datetime.now().time()
+if "end_time" not in st.session_state:
+    st.session_state["end_time"] = (datetime.now() + timedelta(hours=1)).time()
+
 start_date = st.date_input("Start Date", datetime.today())
-start_time = st.time_input("Start Time", datetime.now().time())
+start_time = st.time_input("Start Time", st.session_state["start_time"], key="start_time")
 end_date = st.date_input("End Date", datetime.today())
-end_time = st.time_input("End Time", (datetime.now() + timedelta(hours=1)).time())
+end_time = st.time_input("End Time", st.session_state["end_time"], key="end_time")
+
 start_dt = datetime.combine(start_date, start_time)
 end_dt = datetime.combine(end_date, end_time)
 
@@ -39,8 +47,21 @@ if st.button("💾 Save Non-Availability"):
 
 st.dataframe(log_df, use_container_width=True)
 
-# Weekly Non-Availability Summary
-st.subheader("📅 Non-Availability Summary Across All Resources")
+# --- Streamlit-Calendar View ---
+st.subheader("📆 Calendar View of Logged Non-Availability")
+calendar_events = []
+if not log_df.empty:
+    for _, row in log_df.iterrows():
+        calendar_events.append({
+            "title": f"{row['Reason']}",
+            "start": row["Start"],
+            "end": row["End"]
+        })
+
+calendar(events=calendar_events, options={"editable": False})
+
+# --- Summary Chart ---
+st.subheader("📅 Summary Across All Resources")
 summary_data = []
 for r in resources:
     path = f"{r}_non_availability.csv"
@@ -58,9 +79,9 @@ if summary_data:
     st.dataframe(na_summary)
     st.bar_chart(na_summary.pivot(index="Resource", columns="Reason", values="Total_Hours").fillna(0))
 else:
-    st.info("No non-availability data found yet.")
+    st.info("No availability data yet.")
 
-# Main JIRA Data Analysis
+# --- JIRA Analysis ---
 if uploaded_file:
     try:
         df = pd.read_excel(uploaded_file)
@@ -90,7 +111,7 @@ if uploaded_file:
         merged_df = pd.merge(agg_df, available_df, on="Assignee", how="left")
         merged_df["Overallocation Flag"] = merged_df["Original Estimate (hrs)"] > merged_df["Available Hours"]
 
-        st.subheader("📊 Workload vs. Availability")
+        st.subheader("📊 Workload vs. Adjusted Availability")
         st.dataframe(merged_df)
 
         fig = px.density_heatmap(
@@ -102,15 +123,15 @@ if uploaded_file:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        st.subheader("🧠 GPT-Powered Recommendations (Placeholder)")
+        st.subheader("🧠 GPT-Powered Suggestions (Placeholder)")
         st.markdown("""
-        > Based on current utilization and non-availability:
-        - Charlie and Alice are over-allocated.
-        - Recommend reassigning low-priority tasks to Bob or Diana.
-        - Consider pushing non-critical work to next sprint.
+        > Based on this week's availability and utilization:
+        - Consider reassigning work from overloaded users.
+        - Resolve conflicts involving blocked timelines due to leaves.
+        - Engage GPT-4 to refine these decisions dynamically.
         """)
 
     except Exception as e:
-        st.error(f"Processing error: {e}")
+        st.error(f"JIRA Data Processing Error: {e}")
 else:
-    st.info("Upload a JIRA Excel file to proceed.")
+    st.info("Upload JIRA Excel to continue.")
