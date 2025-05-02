@@ -3,18 +3,22 @@ import pandas as pd
 import plotly.express as px
 from datetime import datetime, timedelta
 import os
+import openai
 from streamlit_calendar import calendar
+from dotenv import load_dotenv
 
-st.set_page_config(page_title="Resource Monitor Enhanced", layout="wide")
-st.title("📊 Resource Monitoring with Non-Availability + Calendar + GPT")
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Sidebar upload and user selection
+st.set_page_config(page_title="Resource Monitor with GPT", layout="wide")
+st.title("📊 Resource Monitoring with Non-Availability and GPT Assistant")
+
 uploaded_file = st.sidebar.file_uploader("Upload JIRA Excel", type=["xlsx"])
 resources = ["Alice", "Bob", "Charlie", "Diana"]
 user = st.sidebar.selectbox("Select Resource", resources)
 
-# --- Manual Entry with Persistent Time Input ---
-st.subheader("🛠️ Log Non-Availability with Start/End Time")
+# --- Time-stable Non-Availability Entry ---
+st.subheader("🛠️ Log Non-Availability")
 if "start_time" not in st.session_state:
     st.session_state["start_time"] = datetime.now().time()
 if "end_time" not in st.session_state:
@@ -27,7 +31,6 @@ end_time = st.time_input("End Time", st.session_state["end_time"], key="end_time
 
 start_dt = datetime.combine(start_date, start_time)
 end_dt = datetime.combine(end_date, end_time)
-
 reason = st.selectbox("Reason", ["Meeting", "Leave", "Sick", "Unplanned Leave", "Out of Office"])
 log_file = f"{user}_non_availability.csv"
 
@@ -47,8 +50,8 @@ if st.button("💾 Save Non-Availability"):
 
 st.dataframe(log_df, use_container_width=True)
 
-# --- Streamlit-Calendar View ---
-st.subheader("📆 Calendar View of Logged Non-Availability")
+# --- Calendar View ---
+st.subheader("📆 Non-Availability Calendar")
 calendar_events = []
 if not log_df.empty:
     for _, row in log_df.iterrows():
@@ -57,11 +60,10 @@ if not log_df.empty:
             "start": row["Start"],
             "end": row["End"]
         })
-
 calendar(events=calendar_events, options={"editable": False})
 
-# --- Summary Chart ---
-st.subheader("📅 Summary Across All Resources")
+# --- Summary Across All Resources ---
+st.subheader("📅 Summary Across Resources")
 summary_data = []
 for r in resources:
     path = f"{r}_non_availability.csv"
@@ -78,10 +80,8 @@ if summary_data:
     na_summary = all_na.groupby(["Resource", "Reason"]).agg(Total_Hours=("Hours", "sum")).reset_index()
     st.dataframe(na_summary)
     st.bar_chart(na_summary.pivot(index="Resource", columns="Reason", values="Total_Hours").fillna(0))
-else:
-    st.info("No availability data yet.")
 
-# --- JIRA Analysis ---
+# --- JIRA Data Processing ---
 if uploaded_file:
     try:
         df = pd.read_excel(uploaded_file)
@@ -111,7 +111,7 @@ if uploaded_file:
         merged_df = pd.merge(agg_df, available_df, on="Assignee", how="left")
         merged_df["Overallocation Flag"] = merged_df["Original Estimate (hrs)"] > merged_df["Available Hours"]
 
-        st.subheader("📊 Workload vs. Adjusted Availability")
+        st.subheader("📊 Workload vs. Availability")
         st.dataframe(merged_df)
 
         fig = px.density_heatmap(
@@ -123,15 +123,18 @@ if uploaded_file:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        st.subheader("🧠 GPT-Powered Suggestions (Placeholder)")
-        st.markdown("""
-        > Based on this week's availability and utilization:
-        - Consider reassigning work from overloaded users.
-        - Resolve conflicts involving blocked timelines due to leaves.
-        - Engage GPT-4 to refine these decisions dynamically.
-        """)
-
+        # --- Inline GPT Assistant ---
+        st.subheader("🤖 GPT Assistant for Workload Insights")
+        query = st.text_area("Ask a question about the data:")
+        if query:
+            response = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[
+                    {"role": "system", "content": "You are a project management assistant that summarizes team workload, availability, and conflicts from a dataset."},
+                    {"role": "user", "content": f"Here is the data: {merged_df.to_string(index=False)}"},
+                    {"role": "user", "content": query}
+                ]
+            )
+            st.markdown(f"**Answer:** {response.choices[0].message['content']}")
     except Exception as e:
-        st.error(f"JIRA Data Processing Error: {e}")
-else:
-    st.info("Upload JIRA Excel to continue.")
+        st.error(f"Processing error: {e}")
