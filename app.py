@@ -1,30 +1,48 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import os
 
 st.set_page_config(page_title="Resource Monitor", layout="wide")
 st.title("📊 Resource Monitoring and Control App")
 
 st.sidebar.header("Upload JIRA Excel File")
 uploaded_file = st.sidebar.file_uploader("Choose an Excel file", type=["xlsx"])
+availability_dir = "."
 
 if uploaded_file:
     try:
         df = pd.read_excel(uploaded_file)
         st.success("✅ Data loaded successfully!")
 
-        # Convert seconds to hours
         df["Original Estimate (hrs)"] = df["Original Estimate (sec)"] / 3600
         df["Time Spent (hrs)"] = df["Time Spent (sec)"] / 3600
 
-        # Group by Assignee to calculate utilization
         agg_df = df.groupby("Assignee").agg({
             "Original Estimate (hrs)": "sum",
             "Time Spent (hrs)": "sum"
         }).reset_index()
-
         agg_df["Utilization (%)"] = (agg_df["Time Spent (hrs)"] / agg_df["Original Estimate (hrs)"]) * 100
         agg_df["Utilization (%)"] = agg_df["Utilization (%)"].round(1)
+
+        # Load manual availability if available
+        st.subheader("📅 Resource Availability (Imported)")
+        availability_data = {}
+        for user in df["Assignee"].unique():
+            file_path = os.path.join(availability_dir, f"{user}_availability.csv")
+            if os.path.exists(file_path):
+                avail_df = pd.read_csv(file_path)
+                daily_avail = avail_df.drop("Date", axis=1).sum(axis=1).sum() / 2  # Assume each check = 0.5h
+                availability_data[user] = round(daily_avail, 2)
+
+        if availability_data:
+            avail_df = pd.DataFrame(list(availability_data.items()), columns=["Assignee", "Available Hours"])
+            merged = pd.merge(agg_df, avail_df, on="Assignee", how="left")
+            merged["Available Hours"].fillna(80, inplace=True)  # Default 2-week sprint
+            merged["Overallocation Flag"] = merged["Original Estimate (hrs)"] > merged["Available Hours"]
+            st.dataframe(merged)
+        else:
+            st.info("Manual availability files not found. Using default 80h per sprint.")
 
         # KPIs
         avg_util = agg_df["Utilization (%)"].mean().round(1)
@@ -36,7 +54,6 @@ if uploaded_file:
         col2.metric("🔥 Over-allocated", overload_count)
         col3.metric("🧊 Under-utilized", underutilized_count)
 
-        # Resource Utilization Heatmap
         fig = px.density_heatmap(
             agg_df,
             x="Assignee",
@@ -46,41 +63,6 @@ if uploaded_file:
             title="Resource Utilization Heatmap"
         )
         st.plotly_chart(fig, use_container_width=True)
-
-        st.subheader("⚠️ Resource Conflict Detection")
-        conflict_df = df.groupby(["Assignee", "Sprint"]).agg({
-            "Original Estimate (hrs)": "sum"
-        }).reset_index()
-        conflict_df["Conflict Flag"] = conflict_df["Original Estimate (hrs)"] > 40
-        conflicts = conflict_df[conflict_df["Conflict Flag"]]
-
-        if not conflicts.empty:
-            st.warning("The following resource(s) are over-allocated within a sprint:")
-            st.dataframe(conflicts[["Assignee", "Sprint", "Original Estimate (hrs)"]])
-        else:
-            st.success("✅ No sprint-level over-allocations detected.")
-
-        st.subheader("💡 Reassignment Suggestions")
-        overloaded = agg_df[agg_df["Utilization (%)"] > 100]
-        underused = agg_df[agg_df["Utilization (%)"] < 60]
-
-        suggestions = []
-        for _, row in overloaded.iterrows():
-            assignee = row["Assignee"]
-            tasks = df[df["Assignee"] == assignee].sort_values(by="Original Estimate (hrs)", ascending=False)
-            if not underused.empty:
-                target = underused.sample(1).iloc[0]["Assignee"]
-                suggestions.append({
-                    "From": assignee,
-                    "Task to Reassign": tasks.iloc[0]["Summary"],
-                    "Hours": tasks.iloc[0]["Original Estimate (hrs)"],
-                    "To": target
-                })
-
-        if suggestions:
-            st.table(pd.DataFrame(suggestions))
-        else:
-            st.info("No reassignment needed at this time.")
 
         st.subheader("📋 Raw Data Preview")
         st.dataframe(df, use_container_width=True)
