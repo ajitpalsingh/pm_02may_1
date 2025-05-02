@@ -17,7 +17,6 @@ uploaded_file = st.sidebar.file_uploader("Upload JIRA Excel", type=["xlsx"])
 resources = ["Alice", "Bob", "Charlie", "Diana"]
 user = st.sidebar.selectbox("Select Resource", resources)
 
-# Time-persistent inputs
 if "start_time" not in st.session_state:
     st.session_state["start_time"] = datetime.now().time()
 if "end_time" not in st.session_state:
@@ -50,7 +49,6 @@ if st.button("💾 Save Non-Availability"):
 
 st.dataframe(log_df, use_container_width=True)
 
-# Calendar visualization
 st.subheader("📆 Calendar View")
 calendar_events = []
 if not log_df.empty:
@@ -62,7 +60,6 @@ if not log_df.empty:
         })
 calendar(events=calendar_events, options={"editable": False})
 
-# Resource-wide summary
 st.subheader("📅 Resource-Wide Summary")
 summary_data = []
 for r in resources:
@@ -81,7 +78,6 @@ if summary_data:
     st.dataframe(na_summary)
     st.bar_chart(na_summary.pivot(index="Resource", columns="Reason", values="Total_Hours").fillna(0))
 
-# Main JIRA analysis
 if uploaded_file:
     try:
         df = pd.read_excel(uploaded_file)
@@ -123,18 +119,17 @@ if uploaded_file:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        # Inline GPT assistant using new SDK
-        st.subheader("🤖 GPT Assistant (v1 SDK)")
+        st.subheader("🤖 GPT Assistant (v1 SDK - Fixed f-string)")
         with st.form("gpt_query_form"):
             query = st.text_area("Ask a question about the data:", height=150)
             submitted = st.form_submit_button("🔍 Ask GPT")
             if submitted and query:
+                merged_text = merged_df.to_string(index=False)
                 response = openai.chat.completions.create(
                     model="gpt-4",
                     messages=[
                         {"role": "system", "content": "You are a project assistant summarizing availability and conflicts."},
-                        {"role": "user", "content": f"Data:
-{merged_df.to_string(index=False)}"},
+                        {"role": "user", "content": f"Data:\n{merged_text}"},
                         {"role": "user", "content": query}
                     ]
                 )
