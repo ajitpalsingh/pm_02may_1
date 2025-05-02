@@ -13,11 +13,11 @@ if uploaded_file:
         df = pd.read_excel(uploaded_file)
         st.success("✅ Data loaded successfully!")
 
-        # Convert time from seconds to hours
+        # Convert seconds to hours
         df["Original Estimate (hrs)"] = df["Original Estimate (sec)"] / 3600
         df["Time Spent (hrs)"] = df["Time Spent (sec)"] / 3600
 
-        # Group by Assignee
+        # Group by Assignee to calculate utilization
         agg_df = df.groupby("Assignee").agg({
             "Original Estimate (hrs)": "sum",
             "Time Spent (hrs)": "sum"
@@ -36,7 +36,7 @@ if uploaded_file:
         col2.metric("🔥 Over-allocated", overload_count)
         col3.metric("🧊 Under-utilized", underutilized_count)
 
-        # Heatmap
+        # Resource Utilization Heatmap
         fig = px.density_heatmap(
             agg_df,
             x="Assignee",
@@ -46,6 +46,41 @@ if uploaded_file:
             title="Resource Utilization Heatmap"
         )
         st.plotly_chart(fig, use_container_width=True)
+
+        st.subheader("⚠️ Resource Conflict Detection")
+        conflict_df = df.groupby(["Assignee", "Sprint"]).agg({
+            "Original Estimate (hrs)": "sum"
+        }).reset_index()
+        conflict_df["Conflict Flag"] = conflict_df["Original Estimate (hrs)"] > 40
+        conflicts = conflict_df[conflict_df["Conflict Flag"]]
+
+        if not conflicts.empty:
+            st.warning("The following resource(s) are over-allocated within a sprint:")
+            st.dataframe(conflicts[["Assignee", "Sprint", "Original Estimate (hrs)"]])
+        else:
+            st.success("✅ No sprint-level over-allocations detected.")
+
+        st.subheader("💡 Reassignment Suggestions")
+        overloaded = agg_df[agg_df["Utilization (%)"] > 100]
+        underused = agg_df[agg_df["Utilization (%)"] < 60]
+
+        suggestions = []
+        for _, row in overloaded.iterrows():
+            assignee = row["Assignee"]
+            tasks = df[df["Assignee"] == assignee].sort_values(by="Original Estimate (hrs)", ascending=False)
+            if not underused.empty:
+                target = underused.sample(1).iloc[0]["Assignee"]
+                suggestions.append({
+                    "From": assignee,
+                    "Task to Reassign": tasks.iloc[0]["Summary"],
+                    "Hours": tasks.iloc[0]["Original Estimate (hrs)"],
+                    "To": target
+                })
+
+        if suggestions:
+            st.table(pd.DataFrame(suggestions))
+        else:
+            st.info("No reassignment needed at this time.")
 
         st.subheader("📋 Raw Data Preview")
         st.dataframe(df, use_container_width=True)
