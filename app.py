@@ -17,13 +17,13 @@ uploaded_file = st.sidebar.file_uploader("Upload JIRA Excel", type=["xlsx"])
 resources = ["Alice", "Bob", "Charlie", "Diana"]
 user = st.sidebar.selectbox("Select Resource", resources)
 
-# --- Time-stable Non-Availability Entry ---
-st.subheader("🛠️ Log Non-Availability")
+# Time-persistent inputs
 if "start_time" not in st.session_state:
     st.session_state["start_time"] = datetime.now().time()
 if "end_time" not in st.session_state:
     st.session_state["end_time"] = (datetime.now() + timedelta(hours=1)).time()
 
+st.subheader("🛠️ Log Non-Availability")
 start_date = st.date_input("Start Date", datetime.today())
 start_time = st.time_input("Start Time", st.session_state["start_time"], key="start_time")
 end_date = st.date_input("End Date", datetime.today())
@@ -50,8 +50,8 @@ if st.button("💾 Save Non-Availability"):
 
 st.dataframe(log_df, use_container_width=True)
 
-# --- Calendar View ---
-st.subheader("📆 Non-Availability Calendar")
+# Calendar visualization
+st.subheader("📆 Calendar View")
 calendar_events = []
 if not log_df.empty:
     for _, row in log_df.iterrows():
@@ -62,8 +62,8 @@ if not log_df.empty:
         })
 calendar(events=calendar_events, options={"editable": False})
 
-# --- Summary Across All Resources ---
-st.subheader("📅 Summary Across Resources")
+# Resource-wide summary
+st.subheader("📅 Resource-Wide Summary")
 summary_data = []
 for r in resources:
     path = f"{r}_non_availability.csv"
@@ -81,7 +81,7 @@ if summary_data:
     st.dataframe(na_summary)
     st.bar_chart(na_summary.pivot(index="Resource", columns="Reason", values="Total_Hours").fillna(0))
 
-# --- JIRA Data Processing ---
+# Main JIRA analysis
 if uploaded_file:
     try:
         df = pd.read_excel(uploaded_file)
@@ -111,7 +111,7 @@ if uploaded_file:
         merged_df = pd.merge(agg_df, available_df, on="Assignee", how="left")
         merged_df["Overallocation Flag"] = merged_df["Original Estimate (hrs)"] > merged_df["Available Hours"]
 
-        st.subheader("📊 Workload vs. Availability")
+        st.subheader("📊 Workload vs. Adjusted Availability")
         st.dataframe(merged_df)
 
         fig = px.density_heatmap(
@@ -123,18 +123,24 @@ if uploaded_file:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        # --- Inline GPT Assistant ---
-        st.subheader("🤖 GPT Assistant for Workload Insights")
-        query = st.text_area("Ask a question about the data:")
-        if query:
-            response = openai.ChatCompletion.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a project management assistant that summarizes team workload, availability, and conflicts from a dataset."},
-                    {"role": "user", "content": f"Here is the data: {merged_df.to_string(index=False)}"},
-                    {"role": "user", "content": query}
-                ]
-            )
-            st.markdown(f"**Answer:** {response.choices[0].message['content']}")
+        # Inline GPT assistant using new SDK
+        st.subheader("🤖 GPT Assistant (v1 SDK)")
+        with st.form("gpt_query_form"):
+            query = st.text_area("Ask a question about the data:", height=150)
+            submitted = st.form_submit_button("🔍 Ask GPT")
+            if submitted and query:
+                response = openai.chat.completions.create(
+                    model="gpt-4",
+                    messages=[
+                        {"role": "system", "content": "You are a project assistant summarizing availability and conflicts."},
+                        {"role": "user", "content": f"Data:
+{merged_df.to_string(index=False)}"},
+                        {"role": "user", "content": query}
+                    ]
+                )
+                st.markdown(f"**Answer:** {response.choices[0].message.content}")
+
     except Exception as e:
         st.error(f"Processing error: {e}")
+else:
+    st.info("Upload a JIRA Excel file to continue.")
