@@ -316,7 +316,7 @@ if view == "Radar Chart" and worklogs_df is not None and skills_df is not None:
 from fpdf import FPDF
 from openai import OpenAI
 if view == "GPT Insight Widgets" and issues_df is not None:
-    if 'chat_history' not in st.session_state:
+        if 'chat_history' not in st.session_state:
         st.session_state.chat_history = []
     if st.button("🧹 Clear Chat"):
         st.session_state.chat_history = []
