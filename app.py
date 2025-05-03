@@ -113,8 +113,8 @@ if view == "PM Daily Brief" and issues_df is not None:
     unassigned = issues_df[issues_df['Assignee'].isna()]
     due_soon = issues_df[pd.to_datetime(issues_df['Due Date'], errors='coerce').between(today, today + pd.Timedelta(days=7))]
     start_dates = pd.to_datetime(issues_df['Start Date'], errors='coerce')
-duration = (today - start_dates).dt.days
-stuck = issues_df[(issues_df['Status'] == 'In Progress') & (duration > 7)]
+    duration = (today - start_dates).dt.days
+    stuck = issues_df[(issues_df['Status'] == 'In Progress') & (duration > 7)]
     if not unassigned.empty:
         st.markdown("**🔲 Unassigned Tasks**")
         st.dataframe(unassigned)
@@ -152,3 +152,21 @@ stuck = issues_df[(issues_df['Status'] == 'In Progress') & (duration > 7)]
     - {len(overdue)} overdue tasks
     """
     st.download_button("📄 Download Brief as TXT", brief, file_name="PM_Daily_Brief.txt")
+
+# --- Resource Utilization ---
+if view == "Resource Utilization" and worklogs_df is not None:
+    st.title("📊 Resource Utilization by Week")
+    worklogs_df['Date'] = pd.to_datetime(worklogs_df['Date'], errors='coerce')
+    worklogs_df['Week'] = worklogs_df['Date'].dt.strftime('%Y-W%U')
+
+    grouped = worklogs_df.groupby(['Week', 'Resource'])['Time Spent (hrs)'].sum().reset_index()
+    pivot = grouped.pivot(index='Week', columns='Resource', values='Time Spent (hrs)').fillna(0)
+
+    fig = px.bar(
+        pivot,
+        x=pivot.index,
+        y=pivot.columns,
+        title="Weekly Resource Utilization (hrs)",
+        labels={'value': 'Hours Worked', 'Week': 'Week'},
+    )
+    st.plotly_chart(fig, use_container_width=True)
