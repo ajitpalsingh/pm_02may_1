@@ -316,16 +316,28 @@ if view == "Radar Chart" and worklogs_df is not None and skills_df is not None:
 from openai import OpenAI
 if view == "GPT Insight Widgets" and issues_df is not None:
     if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
+    st.session_state.chat_history = []
     if st.button("🧹 Clear Chat"):
         st.session_state.chat_history = []
     st.title("🤖 AI-Powered Insights")
     st.info("This section uses GPT to analyze your JIRA project data.")
 
-    sample_prompt = "What are the key risks in current sprint and how can they be mitigated?"
-    user_query = st.text_area("Ask GPT a project-related question:", value=sample_prompt)
+    common_questions = [
+    "Which resources are overloaded this sprint?",
+    "Who has the most idle time this week?",
+    "Are any team members underutilized across sprints?",
+    "Which roles are creating delivery bottlenecks?",
+    "Do we need to hire or reassign any skills based on current workload?",
+    "What tasks are not progressing as expected and who is responsible?",
+    "Are resources consistently working on tasks matching their skill sets?",
+    "What is the story point load distribution among QA, frontend, and backend developers?",
+    "How can we rebalance the team workload for better sprint outcomes?"
+]
+selected_question = st.selectbox("📌 Choose a common PM question (or edit below):", options=common_questions)
+user_query = st.text_area("Ask GPT a project-related question:", value=selected_question)
+
     if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
+    st.session_state.chat_history = []
 
     if st.button("Generate Insight"):
         with st.spinner("Generating response from GPT..."):
