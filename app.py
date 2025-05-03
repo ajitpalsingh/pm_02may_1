@@ -326,11 +326,11 @@ if view == "GPT Insight Widgets" and issues_df is not None:
             try:
                 openai.api_key = st.secrets["openai_api_key"]
                 context_summary = issues_df[['Summary', 'Status', 'Assignee', 'Due Date']].dropna().head(10).to_string()
-                prompt = f"Project data:
+                prompt = f"""Project data:
 {context_summary}
 
 User query: {user_query}
-Answer:"
+Answer:"""
 
                 response = openai.ChatCompletion.create(
                     model="gpt-3.5-turbo",
