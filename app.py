@@ -99,7 +99,11 @@ view = st.sidebar.radio("Go to", [
     "Resource Utilization",
     "Skill Distribution",
     "Sprint Burnup",
-    "Work Calendar"
+    "Work Calendar",
+    "Gantt Chart",
+    "Traffic Light Matrix",
+    "Sankey Diagram",
+    "Radar Chart"
 ])
 
 # --- PM Daily Brief ---
