@@ -10,8 +10,8 @@ from dotenv import load_dotenv
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
 
-st.set_page_config(page_title="Resource Monitor with GPT", layout="wide")
-st.title("📊 Resource Monitoring with Non-Availability and GPT Assistant")
+st.set_page_config(page_title="Resource Monitor + Full Data GPT", layout="wide")
+st.title("📊 Resource Monitoring with Full Data Access + GPT Assistant")
 
 uploaded_file = st.sidebar.file_uploader("Upload JIRA Excel", type=["xlsx"])
 resources = ["Alice", "Bob", "Charlie", "Diana"]
@@ -27,12 +27,11 @@ start_date = st.date_input("Start Date", datetime.today())
 start_time = st.time_input("Start Time", st.session_state["start_time"], key="start_time")
 end_date = st.date_input("End Date", datetime.today())
 end_time = st.time_input("End Time", st.session_state["end_time"], key="end_time")
-
 start_dt = datetime.combine(start_date, start_time)
 end_dt = datetime.combine(end_date, end_time)
 reason = st.selectbox("Reason", ["Meeting", "Leave", "Sick", "Unplanned Leave", "Out of Office"])
-log_file = f"{user}_non_availability.csv"
 
+log_file = f"{user}_non_availability.csv"
 try:
     log_df = pd.read_csv(log_file)
 except FileNotFoundError:
@@ -49,7 +48,6 @@ if st.button("💾 Save Non-Availability"):
 
 st.dataframe(log_df, use_container_width=True)
 
-st.subheader("📆 Calendar View")
 calendar_events = []
 if not log_df.empty:
     for _, row in log_df.iterrows():
@@ -60,7 +58,7 @@ if not log_df.empty:
         })
 calendar(events=calendar_events, options={"editable": False})
 
-st.subheader("📅 Resource-Wide Summary")
+csv_summary = ""
 summary_data = []
 for r in resources:
     path = f"{r}_non_availability.csv"
@@ -71,6 +69,7 @@ for r in resources:
         df["Hours"] = (df["End"] - df["Start"]).dt.total_seconds() / 3600
         df["Resource"] = r
         summary_data.append(df)
+        csv_summary += f"--- {r}_non_availability.csv ---\n" + df.to_string(index=False) + "\n"
 
 if summary_data:
     all_na = pd.concat(summary_data)
@@ -78,9 +77,11 @@ if summary_data:
     st.dataframe(na_summary)
     st.bar_chart(na_summary.pivot(index="Resource", columns="Reason", values="Total_Hours").fillna(0))
 
+jira_csv_str = ""
 if uploaded_file:
     try:
         df = pd.read_excel(uploaded_file)
+        jira_csv_str = df.to_string(index=False)
         df["Original Estimate (hrs)"] = df["Original Estimate (sec)"] / 3600
         df["Time Spent (hrs)"] = df["Time Spent (sec)"] / 3600
 
@@ -119,7 +120,7 @@ if uploaded_file:
         )
         st.plotly_chart(fig, use_container_width=True)
 
-        st.subheader("🤖 GPT Assistant (v1 SDK - Fixed f-string)")
+        st.subheader("🤖 GPT Assistant (with all CSV & visual data)")
         with st.form("gpt_query_form"):
             query = st.text_area("Ask a question about the data:", height=150)
             submitted = st.form_submit_button("🔍 Ask GPT")
@@ -128,8 +129,10 @@ if uploaded_file:
                 response = openai.chat.completions.create(
                     model="gpt-4",
                     messages=[
-                        {"role": "system", "content": "You are a project assistant summarizing availability and conflicts."},
-                        {"role": "user", "content": f"Data:\n{merged_text}"},
+                        {"role": "system", "content": "You are a project assistant helping with resource planning and analysis."},
+                        {"role": "user", "content": f"JIRA Excel Data:\n{jira_csv_str}"},
+                        {"role": "user", "content": f"All CSV Data:\n{csv_summary}"},
+                        {"role": "user", "content": f"Merged Utilization Table:\n{merged_text}"},
                         {"role": "user", "content": query}
                     ]
                 )
