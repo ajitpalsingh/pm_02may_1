@@ -1,7 +1,8 @@
 streamlit
 pandas
-openai
-streamlit_calendar
 matplotlib
 fpdf
 python-pptx
+openai
+xlsxwriter
+streamlit-calendar
