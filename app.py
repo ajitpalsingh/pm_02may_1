@@ -112,8 +112,9 @@ if view == "PM Daily Brief" and issues_df is not None:
     st.subheader("🔧 Action Required")
     unassigned = issues_df[issues_df['Assignee'].isna()]
     due_soon = issues_df[pd.to_datetime(issues_df['Due Date'], errors='coerce').between(today, today + pd.Timedelta(days=7))]
-    stuck = issues_df[(issues_df['Status'] == 'In Progress') &
-                      (pd.to_datetime(today - pd.to_datetime(issues_df['Start Date'], errors='coerce')).dt.days > 7)]
+    start_dates = pd.to_datetime(issues_df['Start Date'], errors='coerce')
+duration = (today - start_dates).dt.days
+stuck = issues_df[(issues_df['Status'] == 'In Progress') & (duration > 7)]
     if not unassigned.empty:
         st.markdown("**🔲 Unassigned Tasks**")
         st.dataframe(unassigned)
