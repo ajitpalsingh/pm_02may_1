@@ -315,6 +315,10 @@ if view == "Radar Chart" and worklogs_df is not None and skills_df is not None:
 # --- GPT Insight Widgets ---
 from openai import OpenAI
 if view == "GPT Insight Widgets" and issues_df is not None:
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+    if st.button("🧹 Clear Chat"):
+        st.session_state.chat_history = []
     st.title("🤖 AI-Powered Insights")
     st.info("This section uses GPT to analyze your JIRA project data.")
 
