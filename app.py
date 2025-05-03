@@ -313,10 +313,11 @@ if view == "Radar Chart" and worklogs_df is not None and skills_df is not None:
         st.plotly_chart(fig, use_container_width=True)
 
 # --- GPT Insight Widgets ---
+from fpdf import FPDF
 from openai import OpenAI
 if view == "GPT Insight Widgets" and issues_df is not None:
     if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = []
+        st.session_state.chat_history = []
     if st.button("🧹 Clear Chat"):
         st.session_state.chat_history = []
     st.title("🤖 AI-Powered Insights")
@@ -363,5 +364,21 @@ Answer:"""
                 for i, (q, a) in enumerate(st.session_state.chat_history):
                     st.markdown(f"**🧑‍💼 Question {i+1}:** {q}")
                     st.markdown(f"**🤖 Answer {i+1}:** {a}")
+
+                # Add download chat transcript button
+                pdf = FPDF()
+                pdf.add_page()
+                pdf.set_font("Arial", size=12)
+                pdf.multi_cell(0, 10, "AI Chat Transcript
+
+")
+                for i, (q, a) in enumerate(st.session_state.chat_history):
+                    pdf.multi_cell(0, 10, f"Q{i+1}: {q}
+A{i+1}: {a}
+")
+                pdf_buffer = io.BytesIO()
+                pdf.output(pdf_buffer)
+                pdf_buffer.seek(0)
+                st.download_button("📥 Download Chat Transcript (PDF)", pdf_buffer, file_name="GPT_Insights_Transcript.pdf")
             except Exception as e:
                 st.error(f"GPT call failed: {e}")
