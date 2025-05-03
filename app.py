@@ -1,55 +1,56 @@
-
 import streamlit as st
-import streamlit.components.v1 as components
-import json
-from pathlib import Path
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.figure_factory as ff
+from datetime import datetime
+import io
+import xlsxwriter
 
-st.set_page_config(page_title="📅 Resource Monitoring Calendar", layout="wide")
-st.title("📅 Resource Non-Availability (FullCalendar.js)")
+# File uploader
+st.sidebar.title("Upload Your JIRA Data")
+uploaded_file = st.sidebar.file_uploader("Choose an Excel file", type="xlsx")
 
-# Load JSON events
-json_path = Path("calendar_events.json")
-if json_path.exists():
-    with open(json_path, "r") as f:
-        events = json.load(f)
-else:
-    events = []
+# Provide downloadable template
+if st.sidebar.button("Download Data Template"):
+    buffer = io.BytesIO()
+    with pd.ExcelWriter(buffer, engine='xlsxwriter') as writer:
+        pd.DataFrame({
+            "Issue Key": ["JIRA-001"],
+            "Summary": ["Implement login page"],
+            "Status": ["To Do"],
+            "Assignee": ["Amit"],
+            "Role": ["Frontend Dev"],
+            "Story Points": [5],
+            "Original Estimate (days)": [3],
+            "Project": ["Lucid"],
+            "Start Date": ["2025-04-01"],
+            "Due Date": ["2025-04-10"]
+        }).to_excel(writer, sheet_name="Issues", index=False)
+        pd.DataFrame({
+            "Resource": ["Amit"],
+            "Skillset": ["Frontend"]
+        }).to_excel(writer, sheet_name="Skills", index=False)
+        pd.DataFrame({
+            "Issue Key": ["JIRA-001"],
+            "Resource": ["Amit"],
+            "Date": ["2025-04-03"],
+            "Time Spent (hrs)": [6]
+        }).to_excel(writer, sheet_name="Worklogs", index=False)
+        pd.DataFrame({
+            "Date": ["2025-04-05"],
+            "Resource": ["Amit"],
+            "Reason": ["Sick Leave"]
+        }).to_excel(writer, sheet_name="Non_Availability", index=False)
 
-# Generate HTML for FullCalendar
-calendar_html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-  <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
-  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
-  <style>
-    #calendar {{
-      max-width: 100%;
-      margin: 0 auto;
-    }}
-  </style>
-</head>
-<body>
-  <div id='calendar'></div>
-  <script>
-    document.addEventListener('DOMContentLoaded', function () {{
-      var calendarEl = document.getElementById('calendar');
-      var calendar = new FullCalendar.Calendar(calendarEl, {{
-        initialView: 'dayGridMonth',
-        editable: false,
-        events: {json.dumps(events)}
-      }});
-      calendar.render();
-    }});
-  </script>
-</body>
-</html>
-"""
+        workbook = writer.book
+        worksheet = writer.sheets['Issues']
+        worksheet.write_comment('A1', 'Unique identifier for each task')
+        worksheet.write_comment('F1', 'Story points: effort estimate (e.g., 3, 5, 8, 13)')
+        worksheet.write_comment('G1', 'Estimated number of working days')
+        worksheet.write_comment('H1', 'Project name (e.g., Lucid, Snowflake)')
 
-# Save the HTML to disk
-html_path = "calendar.html"
-with open(html_path, "w") as f:
-    f.write(calendar_html)
-
-# Render the calendar
-components.iframe(src=html_path, height=600, width=1000)
+    buffer.seek(0)
+    st.sidebar.download_button("📥 Download Template Excel File", data=buffer,
+                               file_name="jira_data_template.xlsx",
+                               mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
