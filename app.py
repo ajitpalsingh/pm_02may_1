@@ -313,7 +313,7 @@ if view == "Radar Chart" and worklogs_df is not None and skills_df is not None:
         st.plotly_chart(fig, use_container_width=True)
 
 # --- GPT Insight Widgets ---
-import openai
+from openai import OpenAI
 if view == "GPT Insight Widgets" and issues_df is not None:
     st.title("🤖 AI-Powered Insights")
     st.info("This section uses GPT to analyze your JIRA project data.")
@@ -324,7 +324,7 @@ if view == "GPT Insight Widgets" and issues_df is not None:
     if st.button("Generate Insight"):
         with st.spinner("Generating response from GPT..."):
             try:
-                openai.api_key = st.secrets["openai_api_key"]
+                client = OpenAI(api_key=st.secrets["openai_api_key"])
                 context_summary = issues_df[['Summary', 'Status', 'Assignee', 'Due Date']].dropna().head(10).to_string()
                 prompt = f"""Project data:
 {context_summary}
@@ -332,13 +332,13 @@ if view == "GPT Insight Widgets" and issues_df is not None:
 User query: {user_query}
 Answer:"""
 
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {"role": "system", "content": "You are a project management assistant."},
-                        {"role": "user", "content": prompt}
-                    ]
-                )
+                response = client.chat.completions.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "system", "content": "You are a project management assistant."},
+        {"role": "user", "content": prompt}
+    ]
+)
                 st.success("✅ Insight generated")
                 st.markdown(response.choices[0].message.content)
             except Exception as e:
