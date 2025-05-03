@@ -373,10 +373,10 @@ Answer:"""
                 pdf.add_page()
                 pdf.set_font("Arial", size=12)
                 pdf.multi_cell(0, 10, "AI Chat Transcript with Timestamps
-
 ")
                 for i, (q, a, t) in enumerate(st.session_state.chat_history):
-                    pdf.multi_cell(0, 10, f"[{t}]
+                    pdf.multi_cell(0, 10, f"---
+[{t}]
 Q{i+1}: {q}
 A{i+1}: {a}
 ")
