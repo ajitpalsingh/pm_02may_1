@@ -316,8 +316,7 @@ if view == "Radar Chart" and worklogs_df is not None and skills_df is not None:
 from fpdf import FPDF
 from openai import OpenAI
 if view == "GPT Insight Widgets" and issues_df is not None:
-        if 'chat_history' not in st.session_state:
-        st.session_state.chat_history = []
+    
     if st.button("🧹 Clear Chat"):
         st.session_state.chat_history = []
     st.title("🤖 AI-Powered Insights")
@@ -360,20 +359,22 @@ Answer:"""
 )
                 st.success("✅ Insight generated")
                 reply = response.choices[0].message.content
-                st.session_state.chat_history.append((user_query, reply))
-                for i, (q, a) in enumerate(st.session_state.chat_history):
-                    st.markdown(f"**🧑‍💼 Question {i+1}:** {q}")
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                st.session_state.chat_history.append((user_query, reply, timestamp))
+                for i, (q, a, t) in enumerate(st.session_state.chat_history):
+                    st.markdown(f"**🧑‍💼 Question {i+1} ({t}):** {q}")
                     st.markdown(f"**🤖 Answer {i+1}:** {a}")
 
                 # Add download chat transcript button
                 pdf = FPDF()
                 pdf.add_page()
                 pdf.set_font("Arial", size=12)
-                pdf.multi_cell(0, 10, "AI Chat Transcript
+                pdf.multi_cell(0, 10, "AI Chat Transcript with Timestamps
 
 ")
-                for i, (q, a) in enumerate(st.session_state.chat_history):
-                    pdf.multi_cell(0, 10, f"Q{i+1}: {q}
+                for i, (q, a, t) in enumerate(st.session_state.chat_history):
+                    pdf.multi_cell(0, 10, f"[{t}]
+Q{i+1}: {q}
 A{i+1}: {a}
 ")
                 pdf_buffer = io.BytesIO()
