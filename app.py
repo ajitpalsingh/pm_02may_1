@@ -103,7 +103,8 @@ view = st.sidebar.radio("Go to", [
     "Gantt Chart",
     "Traffic Light Matrix",
     "Sankey Diagram",
-    "Radar Chart"
+    "Radar Chart",
+    "GPT Insight Widgets"
 ])
 
 # --- PM Daily Brief ---
@@ -310,3 +311,18 @@ if view == "Radar Chart" and worklogs_df is not None and skills_df is not None:
             title=f"Load Balance for Skill: {skill}"
         )
         st.plotly_chart(fig, use_container_width=True)
+
+# --- GPT Insight Widgets ---
+if view == "GPT Insight Widgets" and issues_df is not None:
+    st.title("🤖 AI-Powered Insights")
+    st.info("This section will use GPT to summarize, recommend actions, and answer questions based on your uploaded data.")
+
+    sample_prompt = "What are the key risks in current sprint and how can they be mitigated?"
+    user_query = st.text_area("Ask GPT a project-related question:", value=sample_prompt)
+
+    if st.button("Generate Insight"):
+        st.warning("🧠 GPT integration is a placeholder. Connect to OpenAI API for real-time answers.")
+        st.markdown("**Simulated Insight:**
+- Several tasks are unassigned or overdue.
+- Backend and QA resources are overloaded.
+- Suggest rebalancing load or delaying low-priority features.")
