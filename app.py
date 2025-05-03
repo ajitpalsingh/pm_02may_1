@@ -170,3 +170,49 @@ if view == "Resource Utilization" and worklogs_df is not None:
         labels={'value': 'Hours Worked', 'Week': 'Week'},
     )
     st.plotly_chart(fig, use_container_width=True)
+
+# --- Skill Distribution ---
+if view == "Skill Distribution" and skills_df is not None:
+    st.title("🧠 Skill Distribution by Team")
+    skill_counts = skills_df['Skillset'].value_counts().reset_index()
+    skill_counts.columns = ['Skillset', 'Count']
+
+    fig = px.pie(
+        skill_counts,
+        names='Skillset',
+        values='Count',
+        title="Skill Distribution",
+        hole=0.4
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+# --- Sprint Burnup ---
+if view == "Sprint Burnup" and issues_df is not None:
+    st.title("📈 Sprint Burnup Chart")
+    issues_df['Start Date'] = pd.to_datetime(issues_df['Start Date'], errors='coerce')
+    issues_df['Due Date'] = pd.to_datetime(issues_df['Due Date'], errors='coerce')
+
+    date_range = pd.date_range(start=issues_df['Start Date'].min(), end=issues_df['Due Date'].max())
+    burnup_data = pd.DataFrame({'Date': date_range})
+
+    burnup_data['Completed'] = burnup_data['Date'].apply(
+        lambda d: issues_df[(issues_df['Status'] == 'Done') & (issues_df['Due Date'] <= d)]['Story Points'].sum()
+    )
+    burnup_data['Total Scope'] = issues_df['Story Points'].sum()
+
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(x=burnup_data['Date'], y=burnup_data['Completed'], mode='lines+markers', name='Completed'))
+    fig.add_trace(go.Scatter(x=burnup_data['Date'], y=[burnup_data['Total Scope'].iloc[0]]*len(burnup_data),
+                             mode='lines', name='Total Scope', line=dict(dash='dash')))
+
+    fig.update_layout(title='Sprint Burnup Chart', xaxis_title='Date', yaxis_title='Story Points')
+    st.plotly_chart(fig, use_container_width=True)
+
+# --- Work Calendar ---
+if view == "Work Calendar" and leaves_df is not None:
+    st.title("📆 Resource Non-Availability Calendar")
+    leaves_df['Date'] = pd.to_datetime(leaves_df['Date'], errors='coerce')
+    calendar_data = leaves_df.groupby(['Date', 'Resource']).size().reset_index(name='Count')
+
+    heatmap_data = calendar_data.pivot(index='Resource', columns='Date', values='Count').fillna(0)
+    st.dataframe(heatmap_data.style.background_gradient(axis=1, cmap='YlOrRd'))
