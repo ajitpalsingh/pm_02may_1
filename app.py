@@ -313,17 +313,33 @@ if view == "Radar Chart" and worklogs_df is not None and skills_df is not None:
         st.plotly_chart(fig, use_container_width=True)
 
 # --- GPT Insight Widgets ---
+import openai
 if view == "GPT Insight Widgets" and issues_df is not None:
     st.title("🤖 AI-Powered Insights")
-    st.info("This section will use GPT to summarize, recommend actions, and answer questions based on your uploaded data.")
+    st.info("This section uses GPT to analyze your JIRA project data.")
 
     sample_prompt = "What are the key risks in current sprint and how can they be mitigated?"
     user_query = st.text_area("Ask GPT a project-related question:", value=sample_prompt)
 
     if st.button("Generate Insight"):
-        st.warning("🧠 GPT integration is a placeholder. Connect to OpenAI API for real-time answers.")
-        st.markdown("""**Simulated Insight:**
-- Several tasks are unassigned or overdue.
-- Backend and QA resources are overloaded.
-- Suggest rebalancing load or delaying low-priority features.
-""")
+        with st.spinner("Generating response from GPT..."):
+            try:
+                openai.api_key = st.secrets["openai_api_key"]
+                context_summary = issues_df[['Summary', 'Status', 'Assignee', 'Due Date']].dropna().head(10).to_string()
+                prompt = f"Project data:
+{context_summary}
+
+User query: {user_query}
+Answer:"
+
+                response = openai.ChatCompletion.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": "You are a project management assistant."},
+                        {"role": "user", "content": prompt}
+                    ]
+                )
+                st.success("✅ Insight generated")
+                st.markdown(response.choices[0].message.content)
+            except Exception as e:
+                st.error(f"GPT call failed: {e}")
