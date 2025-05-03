@@ -325,7 +325,5 @@ if view == "GPT Insight Widgets" and issues_df is not None:
         st.markdown("""**Simulated Insight:**
 - Several tasks are unassigned or overdue.
 - Backend and QA resources are overloaded.
-- Suggest rebalancing load or delaying low-priority features.""")
-- Several tasks are unassigned or overdue.
-- Backend and QA resources are overloaded.
-- Suggest rebalancing load or delaying low-priority features.")
+- Suggest rebalancing load or delaying low-priority features.
+""")
