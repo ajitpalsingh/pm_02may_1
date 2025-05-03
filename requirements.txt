@@ -5,3 +5,6 @@ plotly
 openai>=1.0.0
 streamlit-calendar
 python-dotenv
+matplotlib
+fpdf
+python-pptx
