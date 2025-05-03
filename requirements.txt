@@ -1,9 +1,10 @@
-
 streamlit
 pandas
-openai
-fpdf
-matplotlib
-python-pptx
-xlsxwriter
+openpyxl
+plotly
+openai>=1.0.0
 streamlit-calendar
+python-dotenv
+matplotlib
+fpdf
+python-pptx
