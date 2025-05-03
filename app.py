@@ -322,7 +322,10 @@ if view == "GPT Insight Widgets" and issues_df is not None:
 
     if st.button("Generate Insight"):
         st.warning("🧠 GPT integration is a placeholder. Connect to OpenAI API for real-time answers.")
-        st.markdown("**Simulated Insight:**
+        st.markdown("""**Simulated Insight:**
+- Several tasks are unassigned or overdue.
+- Backend and QA resources are overloaded.
+- Suggest rebalancing load or delaying low-priority features.""")
 - Several tasks are unassigned or overdue.
 - Backend and QA resources are overloaded.
 - Suggest rebalancing load or delaying low-priority features.")
