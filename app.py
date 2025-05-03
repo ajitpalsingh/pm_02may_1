@@ -127,8 +127,6 @@ if uploaded_file:
             pdf.output(tmp.name)
             with open(tmp.name, "rb") as f:
                 st.download_button("⬇ Download PDF", f, file_name="resource_report.pdf")
-                st.markdown("#### 📄 PDF Preview")
-                st.components.v1.iframe(src=tmp.name, height=400)
 
     if st.button("📊 Generate PowerPoint Report"):
         prs = Presentation()
@@ -147,3 +145,21 @@ if uploaded_file:
                 prs.save(tmp_pptx.name)
                 with open(tmp_pptx.name, "rb") as f:
                     st.download_button("⬇ Download PPTX", f, file_name="resource_report.pptx")
+                st.image(tmp_img.name, caption="Slide Preview")
+
+# GPT Assistant
+st.markdown("## 🤖 GPT Assistant for Workload Insights")
+user_prompt = st.text_area("Ask a question about the data:")
+if st.button("🔍 Ask GPT"):
+    if user_prompt.strip():
+        prompt = f"Data:\n{csv_summary}\n\nQuestion: {user_prompt}"
+        response = openai.chat.completions.create(
+            model="gpt-4",
+            messages=[
+                {"role": "system", "content": "You are a data analyst."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        st.markdown("**Answer:** " + response.choices[0].message.content.strip())
+    else:
+        st.warning("Please enter a question.")
