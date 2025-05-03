@@ -1,62 +1,55 @@
 
 import streamlit as st
 import streamlit.components.v1 as components
-import pandas as pd
 import json
-from datetime import datetime
+from pathlib import Path
 
-st.set_page_config(page_title="📅 FullCalendar with Editable Events", layout="wide")
-st.title("📅 FullCalendar.js in Streamlit")
+st.set_page_config(page_title="📅 Resource Monitoring Calendar", layout="wide")
+st.title("📅 Resource Non-Availability (FullCalendar.js)")
 
-# Load events from CSV
-csv_file = "calendar_events.csv"
-try:
-    df = pd.read_csv(csv_file)
-    df["start"] = pd.to_datetime(df["start"])
-    df["end"] = pd.to_datetime(df["end"])
-except FileNotFoundError:
-    df = pd.DataFrame(columns=["title", "start", "end"])
-    df.to_csv(csv_file, index=False)
+# Load JSON events
+json_path = Path("calendar_events.json")
+if json_path.exists():
+    with open(json_path, "r") as f:
+        events = json.load(f)
+else:
+    events = []
 
-# Show as editable calendar
-events = df.to_dict("records")
-events_json = json.dumps(events, default=str)
-
-# Inject FullCalendar with editable features
-components.html(f"""
+# Generate HTML for FullCalendar
+calendar_html = f"""
 <!DOCTYPE html>
 <html>
 <head>
-  <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.css' rel='stylesheet' />
-  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.0/main.min.js'></script>
+  <link href='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css' rel='stylesheet' />
+  <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js'></script>
   <style>
     #calendar {{
       max-width: 100%;
-      margin: 40px auto;
+      margin: 0 auto;
     }}
   </style>
 </head>
 <body>
   <div id='calendar'></div>
   <script>
-    document.addEventListener('DOMContentLoaded', function() {{
+    document.addEventListener('DOMContentLoaded', function () {{
       var calendarEl = document.getElementById('calendar');
       var calendar = new FullCalendar.Calendar(calendarEl, {{
         initialView: 'dayGridMonth',
-        editable: true,
-        selectable: true,
-        events: {events_json},
-        eventClick: function(info) {{
-          alert('Clicked event: ' + info.event.title);
-        }}
+        editable: false,
+        events: {json.dumps(events)}
       }});
       calendar.render();
     }});
   </script>
 </body>
 </html>
-""", height=600)
+"""
 
-# Display table for reference
-st.subheader("📋 Event Log")
-st.dataframe(df)
+# Save the HTML to disk
+html_path = "calendar.html"
+with open(html_path, "w") as f:
+    f.write(calendar_html)
+
+# Render the calendar
+components.iframe(src=html_path, height=600, width=1000)
