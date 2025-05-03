@@ -320,6 +320,8 @@ if view == "GPT Insight Widgets" and issues_df is not None:
 
     sample_prompt = "What are the key risks in current sprint and how can they be mitigated?"
     user_query = st.text_area("Ask GPT a project-related question:", value=sample_prompt)
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
 
     if st.button("Generate Insight"):
         with st.spinner("Generating response from GPT..."):
@@ -340,6 +342,10 @@ Answer:"""
     ]
 )
                 st.success("✅ Insight generated")
-                st.markdown(response.choices[0].message.content)
+                reply = response.choices[0].message.content
+                st.session_state.chat_history.append((user_query, reply))
+                for i, (q, a) in enumerate(st.session_state.chat_history):
+                    st.markdown(f"**🧑‍💼 Question {i+1}:** {q}")
+                    st.markdown(f"**🤖 Answer {i+1}:** {a}")
             except Exception as e:
                 st.error(f"GPT call failed: {e}")
