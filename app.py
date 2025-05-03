@@ -316,25 +316,28 @@ if view == "Radar Chart" and worklogs_df is not None and skills_df is not None:
 from fpdf import FPDF
 from openai import OpenAI
 if view == "GPT Insight Widgets" and issues_df is not None:
-    
+    if 'chat_history' not in st.session_state:
+        st.session_state.chat_history = []
+
     if st.button("🧹 Clear Chat"):
         st.session_state.chat_history = []
+
     st.title("🤖 AI-Powered Insights")
     st.info("This section uses GPT to analyze your JIRA project data.")
 
     common_questions = [
-    "Which resources are overloaded this sprint?",
-    "Who has the most idle time this week?",
-    "Are any team members underutilized across sprints?",
-    "Which roles are creating delivery bottlenecks?",
-    "Do we need to hire or reassign any skills based on current workload?",
-    "What tasks are not progressing as expected and who is responsible?",
-    "Are resources consistently working on tasks matching their skill sets?",
-    "What is the story point load distribution among QA, frontend, and backend developers?",
-    "How can we rebalance the team workload for better sprint outcomes?"
-]
-selected_question = st.selectbox("📌 Choose a common PM question (or edit below):", options=common_questions)
-user_query = st.text_area("Ask GPT a project-related question:", value=selected_question)
+        "Which resources are overloaded this sprint?",
+        "Who has the most idle time this week?",
+        "Are any team members underutilized across sprints?",
+        "Which roles are creating delivery bottlenecks?",
+        "Do we need to hire or reassign any skills based on current workload?",
+        "What tasks are not progressing as expected and who is responsible?",
+        "Are resources consistently working on tasks matching their skill sets?",
+        "What is the story point load distribution among QA, frontend, and backend developers?",
+        "How can we rebalance the team workload for better sprint outcomes?"
+    ]
+    selected_question = st.selectbox("📌 Choose a common PM question (or edit below):", options=common_questions)
+    user_query = st.text_area("Ask GPT a project-related question:", value=selected_question)
 
     if 'chat_history' not in st.session_state:
       st.session_state.chat_history = []
