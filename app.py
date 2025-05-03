@@ -337,7 +337,7 @@ selected_question = st.selectbox("📌 Choose a common PM question (or edit belo
 user_query = st.text_area("Ask GPT a project-related question:", value=selected_question)
 
     if 'chat_history' not in st.session_state:
-    st.session_state.chat_history = []
+      st.session_state.chat_history = []
 
     if st.button("Generate Insight"):
         with st.spinner("Generating response from GPT..."):
