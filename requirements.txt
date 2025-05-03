@@ -1,10 +1,7 @@
 streamlit
 pandas
-numpy
-plotly
 openai
+streamlit_calendar
+matplotlib
 fpdf
 python-pptx
-matplotlib
-xlsxwriter
-streamlit_calendar
