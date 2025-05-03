@@ -10,6 +10,7 @@ import matplotlib.pyplot as plt
 from fpdf import FPDF
 from pptx import Presentation
 from pptx.util import Inches
+from tempfile import NamedTemporaryFile
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -21,16 +22,12 @@ uploaded_file = st.sidebar.file_uploader("Upload JIRA Excel", type=["xlsx"])
 resources = ["Alice", "Bob", "Charlie", "Diana"]
 user = st.sidebar.selectbox("Select Resource", resources)
 
-if "start_time" not in st.session_state:
-    st.session_state["start_time"] = datetime.now().time()
-if "end_time" not in st.session_state:
-    st.session_state["end_time"] = (datetime.now() + timedelta(hours=1)).time()
-
+# Logging Non-Availability
 st.subheader("🛠️ Log Non-Availability")
 start_date = st.date_input("Start Date", datetime.today())
-start_time = st.time_input("Start Time", st.session_state["start_time"], key="start_time")
+start_time = st.time_input("Start Time", datetime.now().time())
 end_date = st.date_input("End Date", datetime.today())
-end_time = st.time_input("End Time", st.session_state["end_time"], key="end_time")
+end_time = st.time_input("End Time", (datetime.now() + timedelta(hours=1)).time())
 start_dt = datetime.combine(start_date, start_time)
 end_dt = datetime.combine(end_date, end_time)
 reason = st.selectbox("Reason", ["Meeting", "Leave", "Sick", "Unplanned Leave", "Out of Office"])
@@ -50,6 +47,7 @@ if st.button("💾 Save Non-Availability"):
     log_df.to_csv(log_file, index=False)
     st.success("Entry saved!")
 
+# Calendar preview
 calendar_events = []
 if not log_df.empty:
     for _, row in log_df.iterrows():
@@ -60,6 +58,7 @@ if not log_df.empty:
         })
 calendar(events=calendar_events, options={"editable": False})
 
+# Summary table
 csv_summary = ""
 summary_data = []
 for r in resources:
@@ -79,6 +78,7 @@ if summary_data:
     st.dataframe(na_summary)
     st.bar_chart(na_summary.pivot(index="Resource", columns="Reason", values="Total_Hours").fillna(0))
 
+# Report generation
 if uploaded_file:
     df = pd.read_excel(uploaded_file)
     df["Original Estimate (hrs)"] = df["Original Estimate (sec)"] / 3600
@@ -117,46 +117,18 @@ if uploaded_file:
     )
     st.plotly_chart(fig, use_container_width=True)
 
-    # GPT Section
-    heatmap_df = merged_df.pivot(index="Assignee", columns="Sprint" if "Sprint" in merged_df.columns else "Available Hours", values="Utilization (%)").fillna(0)
-    avg_util = merged_df["Utilization (%)"].mean().round(2)
-    max_util = merged_df["Utilization (%)"].max()
-    min_util = merged_df["Utilization (%)"].min()
-    heatmap_text = heatmap_df.to_string()
-
-    gpt_heatmap_context = f"""
-This is a heatmap-like matrix showing resource utilization (%) per assignee per sprint:
-{heatmap_text}
-
-Summary:
-- Average Utilization: {avg_util}%
-- Max Utilization: {max_util}% (likely overloaded)
-- Min Utilization: {min_util}% (likely underutilized)
-"""
-
-    with st.form("gpt_query_form"):
-        query = st.text_area("Ask a question about workload or conflicts:", height=150)
-        submitted = st.form_submit_button("🔍 Ask GPT")
-        if submitted and query:
-            response = openai.chat.completions.create(
-                model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are a resource manager assistant."},
-                    {"role": "user", "content": gpt_heatmap_context},
-                    {"role": "user", "content": query}
-                ]
-            )
-            st.markdown(f"**Answer:** {response.choices[0].message.content}")
-
     if st.button("📤 Generate PDF Report"):
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
         pdf.cell(200, 10, txt="Resource Monitoring Report", ln=True, align="C")
         pdf.multi_cell(0, 10, merged_df.to_string(index=False))
-        pdf.output("/mnt/data/resource_report.pdf")
-        st.success("Report generated!")
-        st.download_button("Download PDF", data=open("/mnt/data/resource_report.pdf", "rb"), file_name="resource_report.pdf")
+        with NamedTemporaryFile(delete=False, suffix=".pdf") as tmp:
+            pdf.output(tmp.name)
+            with open(tmp.name, "rb") as f:
+                st.download_button("⬇ Download PDF", f, file_name="resource_report.pdf")
+                st.markdown("#### 📄 PDF Preview")
+                st.components.v1.iframe(src=tmp.name, height=400)
 
     if st.button("📊 Generate PowerPoint Report"):
         prs = Presentation()
@@ -167,8 +139,11 @@ Summary:
         plt.bar(merged_df["Assignee"], merged_df["Utilization (%)"])
         plt.ylabel("Utilization (%)")
         plt.title("Resource Utilization")
-        plt.savefig("/mnt/data/util_chart.png")
-        slide.shapes.add_picture("/mnt/data/util_chart.png", Inches(1), Inches(1.5), width=Inches(6))
-        prs.save("/mnt/data/resource_report.pptx")
-        st.success("PPT report generated.")
-        st.download_button("Download PPT", data=open("/mnt/data/resource_report.pptx", "rb"), file_name="resource_report.pptx")
+
+        with NamedTemporaryFile(delete=False, suffix=".png") as tmp_img:
+            plt.savefig(tmp_img.name)
+            slide.shapes.add_picture(tmp_img.name, Inches(1), Inches(1.5), width=Inches(6))
+            with NamedTemporaryFile(delete=False, suffix=".pptx") as tmp_pptx:
+                prs.save(tmp_pptx.name)
+                with open(tmp_pptx.name, "rb") as f:
+                    st.download_button("⬇ Download PPTX", f, file_name="resource_report.pptx")
