@@ -121,7 +121,27 @@ if uploaded_file:
         st.plotly_chart(fig, use_container_width=True)
 
         st.subheader("🤖 GPT Assistant (with all CSV & visual data)")
-        with st.form("gpt_query_form"):
+        
+        # Compute heatmap pivot
+        heatmap_df = merged_df.pivot(index="Assignee", columns="Sprint", values="Utilization (%)").fillna(0)
+        avg_util = merged_df["Utilization (%)"].mean().round(2)
+        max_util = merged_df["Utilization (%)"].max()
+        min_util = merged_df["Utilization (%)"].min()
+        heatmap_text = heatmap_df.to_string()
+
+        gpt_heatmap_context = f"""
+This is a heatmap-like matrix showing resource utilization (%) per assignee per sprint:
+{heatmap_text}
+
+Summary:
+- Average Utilization: {avg_util}%
+- Max Utilization: {max_util}% (likely overloaded)
+- Min Utilization: {min_util}% (likely underutilized)
+
+Please interpret patterns, imbalances, or red flags you observe from the matrix above.
+"""
+
+with st.form("gpt_query_form"):
             query = st.text_area("Ask a question about the data:", height=150)
             submitted = st.form_submit_button("🔍 Ask GPT")
             if submitted and query:
@@ -133,7 +153,8 @@ if uploaded_file:
                         {"role": "user", "content": f"JIRA Excel Data:\n{jira_csv_str}"},
                         {"role": "user", "content": f"All CSV Data:\n{csv_summary}"},
                         {"role": "user", "content": f"Merged Utilization Table:\n{merged_text}"},
-                        {"role": "user", "content": query}
+                        {"role": "user", "content": gpt_heatmap_context},
+            {"role": "user", "content": query}
                     ]
                 )
                 st.markdown(f"**Answer:** {response.choices[0].message.content}")
