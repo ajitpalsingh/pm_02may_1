@@ -208,8 +208,154 @@ def pm_daily_brief():
     """
     st.download_button("📄 Download Brief as TXT", brief, file_name="PM_Daily_Brief.txt")
 
+# ---------- Stacked Bar Chart ----------
+def stacked_bar_resource_utilization():
+    st.title("📊 Stacked Bar Chart - Resource Utilization by Week")
+    if worklogs_df is None:
+        st.warning("Please upload a valid JIRA Excel file.")
+        return
+
+    if 'Date' not in worklogs_df.columns or 'Resource' not in worklogs_df.columns:
+        st.error("Worklogs must include 'Date' and 'Resource' columns.")
+        return
+
+    worklogs_df['Date'] = pd.to_datetime(worklogs_df['Date'], errors='coerce')
+    worklogs_df = worklogs_df.dropna(subset=['Date'])
+    worklogs_df['Week'] = worklogs_df['Date'].dt.strftime('%Y-%U')
+    grouped = worklogs_df.groupby(['Week', 'Resource'])['Time Spent (hrs)'].sum().reset_index()
+
+    if grouped.empty:
+        st.warning("No worklog data to display.")
+        return
+
+    fig = px.bar(
+        grouped,
+        x='Week',
+        y='Time Spent (hrs)',
+        color='Resource',
+        title='Resource Utilization by Week',
+        text_auto=True
+    )
+    fig.update_layout(barmode='stack', xaxis_title='Week', yaxis_title='Hours Worked')
+    st.plotly_chart(fig, use_container_width=True)
+
+# ---------- Bubble Chart: Overload vs. Velocity ----------
+def bubble_chart_overload_velocity():
+    st.title("🫧 Bubble Chart - Overload vs. Velocity")
+    if worklogs_df is None or issues_df is None:
+        st.warning("Please upload a valid JIRA Excel file.")
+        return
+
+    worklogs_df['Date'] = pd.to_datetime(worklogs_df['Date'], errors='coerce')
+    worklogs_df['Week'] = worklogs_df['Date'].dt.strftime('%Y-%U')
+    actuals = worklogs_df.groupby(['Week', 'Resource'])['Time Spent (hrs)'].sum().reset_index()
+
+    if 'Story Points' not in issues_df.columns or 'Assignee' not in issues_df.columns:
+        st.error("Issues sheet must contain 'Assignee' and 'Story Points'.")
+        return
+
+    velocity = issues_df.groupby('Assignee')['Story Points'].sum().reset_index()
+    velocity.columns = ['Resource', 'Story Points']
+    merged = pd.merge(actuals, velocity, on='Resource', how='left')
+    merged = merged.dropna()
+
+    if merged.empty:
+        st.warning("Insufficient data for bubble chart.")
+        return
+
+    fig = px.scatter(
+        merged,
+        x='Story Points',
+        y='Time Spent (hrs)',
+        size='Time Spent (hrs)',
+        color='Resource',
+        hover_name='Resource',
+        title='Overload vs. Velocity Bubble Chart',
+        labels={'Story Points': 'Velocity', 'Time Spent (hrs)': 'Actual Load'}
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+# ---------- Calendar Heatmap ----------
+def calendar_heatmap():
+    st.title("🌡 Calendar Heatmap - Resource-wise Utilization")
+    if worklogs_df is None:
+        st.warning("Please upload a valid JIRA Excel file.")
+        return
+
+    if 'Date' not in worklogs_df.columns or 'Resource' not in worklogs_df.columns:
+        st.error("Missing 'Date' or 'Resource' in Worklogs data.")
+        return
+
+    worklogs_df['Date'] = pd.to_datetime(worklogs_df['Date'], errors='coerce')
+    df = worklogs_df.dropna(subset=['Date'])
+    df['Day'] = df['Date'].dt.date
+
+    pivot = df.groupby(['Resource', 'Day'])['Time Spent (hrs)'].sum().reset_index()
+    heatmap = pivot.pivot(index='Resource', columns='Day', values='Time Spent (hrs)').fillna(0)
+
+    st.subheader("📆 Utilization Heatmap by Resource")
+    st.dataframe(heatmap.style.background_gradient(cmap='YlOrRd', axis=1))
+
+# ---------- Treemap: Team Resource Distribution ----------
+def treemap_resource_distribution():
+    st.title("🌳 Treemap - Team Resource Distribution")
+    if skills_df is None:
+        st.warning("Please upload a valid JIRA Excel file.")
+        return
+
+    if 'Resource' not in skills_df.columns or 'Skillset' not in skills_df.columns:
+        st.error("Skills data must include 'Resource' and 'Skillset' columns.")
+        return
+
+    skills_df['Count'] = 1
+    fig = px.treemap(
+        skills_df,
+        path=['Skillset', 'Resource'],
+        values='Count',
+        title="Distribution of Resources by Skillset"
+    )
+    st.plotly_chart(fig, use_container_width=True)
+
+# ---------- Burnup Chart by Assignee ----------
+def burnup_by_assignee():
+    st.title("📈 Burnup Chart by Assignee")
+    if issues_df is None:
+        st.warning("Please upload a valid JIRA Excel file.")
+        return
+
+    issues_df['Due Date'] = pd.to_datetime(issues_df['Due Date'], errors='coerce')
+    if issues_df['Due Date'].isna().all():
+        st.warning("Due Date missing in all records.")
+        return
+
+    assignees = issues_df['Assignee'].dropna().unique()
+    for person in assignees:
+        df = issues_df[issues_df['Assignee'] == person]
+        dates = pd.date_range(start=df['Due Date'].min(), end=df['Due Date'].max())
+        burnup = pd.DataFrame({'Date': dates})
+        burnup['Completed'] = burnup['Date'].apply(
+            lambda d: df[(df['Status'] == 'Done') & (df['Due Date'] <= d)]['Story Points'].sum()
+        )
+        burnup['Total Scope'] = df['Story Points'].sum()
+
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(
+            x=burnup['Date'], y=burnup['Completed'], mode='lines+markers', name='Completed'
+        ))
+        fig.add_trace(go.Scatter(
+            x=burnup['Date'], y=[burnup['Total Scope'].iloc[0]]*len(burnup),
+            mode='lines', name='Total Scope', line=dict(dash='dash')
+        ))
+        fig.update_layout(title=f'{person} - Burnup Chart', xaxis_title='Date', yaxis_title='Story Points')
+        st.plotly_chart(fig, use_container_width=True)
+
 # ---------- View Dispatcher ----------
 view = st.sidebar.selectbox("Select View", [
+    "Burnup by Assignee",
+    "Treemap",
+    "Calendar Heatmap",
+    "Bubble Chart",
+    "Stacked Bar Chart",
     "PM Daily Brief",
     "GPT Assistant",
     "Gantt Chart",
@@ -224,9 +370,19 @@ elif view == "Traffic Light Matrix":
     traffic_light_matrix()
 elif view == "Sprint Burnup":
     sprint_burnup()
+elif view == "Stacked Bar Chart":
+    stacked_bar_resource_utilization()
+elif view == "Burnup by Assignee":
+    burnup_by_assignee()
 elif view == "Radar Chart":
     radar_chart()
 elif view == "PM Daily Brief":
     pm_daily_brief()
+elif view == "Bubble Chart":
+    bubble_chart_overload_velocity()
+elif view == "Calendar Heatmap":
+    calendar_heatmap()
+elif view == "Treemap":
+    treemap_resource_distribution()
 elif view == "GPT Assistant":
     gpt_insight_widget()
