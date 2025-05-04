@@ -210,6 +210,7 @@ def pm_daily_brief():
 
 # ---------- Stacked Bar Chart ----------
 def stacked_bar_resource_utilization():
+    global worklogs_df
     st.title("📊 Stacked Bar Chart - Resource Utilization by Week")
     if worklogs_df is None:
         st.warning("Please upload a valid JIRA Excel file.")
@@ -294,7 +295,7 @@ def calendar_heatmap():
     heatmap = pivot.pivot(index='Resource', columns='Day', values='Time Spent (hrs)').fillna(0)
 
     st.subheader("📆 Utilization Heatmap by Resource")
-    st.dataframe(heatmap.style.background_gradient(cmap='YlOrRd', axis=1))
+    st.write(heatmap.style.background_gradient(cmap='YlOrRd', axis=1))
 
 # ---------- Treemap: Team Resource Distribution ----------
 def treemap_resource_distribution():
