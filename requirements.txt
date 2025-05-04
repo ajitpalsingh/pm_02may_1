@@ -3,3 +3,5 @@ pandas
 plotly
 xlsxwriter
 openai>=1.0.0
+matplotlib
+
