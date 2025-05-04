@@ -13,6 +13,7 @@ from datetime import datetime
 import os
 
 fallback_file = "enriched_jira_project_data.xlsx"
+uploaded_file = None
 if uploaded_file is None and os.path.exists(fallback_file):
     uploaded_file = open(fallback_file, "rb")
 st.sidebar.title("Upload Your JIRA Data")
