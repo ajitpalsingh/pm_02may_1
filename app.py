@@ -10,7 +10,16 @@ from openai import OpenAI
 from datetime import datetime
 
 # ---------- Sidebar: Upload and Template ----------
+import os
+
+fallback_file = "enriched_jira_project_data.xlsx"
+if uploaded_file is None and os.path.exists(fallback_file):
+    uploaded_file = open(fallback_file, "rb")
 st.sidebar.title("Upload Your JIRA Data")
+if st.sidebar.button("📂 Load Sample Project Data"):
+    if os.path.exists(fallback_file):
+        uploaded_file = open(fallback_file, "rb")
+        st.sidebar.success("Loaded default file: enriched_jira_project_data.xlsx")
 uploaded_file = st.sidebar.file_uploader("Choose an Excel file", type="xlsx")
 
 if st.sidebar.button("Download Data Template"):
