@@ -353,8 +353,41 @@ def burnup_by_assignee():
         fig.update_layout(title=f'{person} - Burnup Chart', xaxis_title='Date', yaxis_title='Story Points')
         st.plotly_chart(fig, use_container_width=True)
 
+# ---------- Sankey Diagram: Task Flow Across Statuses ----------
+def sankey_task_flow():
+    st.title("🔀 Sankey Diagram - Task Flow Across Statuses")
+    if issues_df is None:
+        st.warning("Please upload a valid JIRA Excel file.")
+        return
+
+    if 'Status' not in issues_df.columns or 'Project' not in issues_df.columns:
+        st.error("Missing 'Status' or 'Project' column in Issues sheet.")
+        return
+
+    transitions = issues_df.groupby(['Project', 'Status']).size().reset_index(name='Count')
+    transitions = transitions[transitions['Count'] > 0]
+    all_labels = list(pd.unique(transitions['Project'].tolist() + transitions['Status'].tolist()))
+    label_index = {k: v for v, k in enumerate(all_labels)}
+
+    fig = go.Figure(data=[go.Sankey(
+        node=dict(
+            pad=15,
+            thickness=20,
+            line=dict(color="black", width=0.5),
+            label=all_labels
+        ),
+        link=dict(
+            source=[label_index[p] for p in transitions['Project']],
+            target=[label_index[s] for s in transitions['Status']],
+            value=transitions['Count']
+        ))])
+
+    fig.update_layout(title_text="Task Flow from Project to Status", font_size=12)
+    st.plotly_chart(fig, use_container_width=True)
+
 # ---------- View Dispatcher ----------
 view = st.sidebar.selectbox("Select View", [
+    "Sankey Diagram",
     "Burnup by Assignee",
     "Treemap",
     "Calendar Heatmap",
@@ -388,5 +421,7 @@ elif view == "Calendar Heatmap":
     calendar_heatmap()
 elif view == "Treemap":
     treemap_resource_distribution()
+elif view == "Sankey Diagram":
+    sankey_task_flow()
 elif view == "GPT Assistant":
     gpt_insight_widget()
