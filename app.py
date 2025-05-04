@@ -372,7 +372,6 @@ def sankey_task_flow():
     fig = go.Figure(data=[go.Sankey(
         arrangement='snap',
         node=dict(
-            label=all_labels,
             color='rgba(63, 81, 181, 0.8)',
             hoverlabel=dict(font=dict(size=14, color='white')),
             pad=15,
