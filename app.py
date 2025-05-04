@@ -230,4 +230,3 @@ elif view == "PM Daily Brief":
     pm_daily_brief()
 elif view == "GPT Assistant":
     gpt_insight_widget()
-    radar_chart()
