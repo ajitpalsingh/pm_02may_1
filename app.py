@@ -370,7 +370,11 @@ def sankey_task_flow():
     label_index = {k: v for v, k in enumerate(all_labels)}
 
     fig = go.Figure(data=[go.Sankey(
+        arrangement='snap',
         node=dict(
+            label=all_labels,
+            color='rgba(63, 81, 181, 0.8)',
+            hoverlabel=dict(font=dict(size=14, color='white')),
             pad=15,
             thickness=20,
             line=dict(color="black", width=0.5),
@@ -382,7 +386,11 @@ def sankey_task_flow():
             value=transitions['Count']
         ))])
 
-    fig.update_layout(title_text="Task Flow from Project to Status", font_size=12)
+    fig.update_layout(
+        title_text="Task Flow from Project to Status",
+        font=dict(size=14, color='black'),
+        height=500
+    )
     st.plotly_chart(fig, use_container_width=True)
 
 # ---------- View Dispatcher ----------
