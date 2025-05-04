@@ -295,7 +295,8 @@ def calendar_heatmap():
     heatmap = pivot.pivot(index='Resource', columns='Day', values='Time Spent (hrs)').fillna(0)
 
     st.subheader("📆 Utilization Heatmap by Resource")
-    st.write(heatmap.style.background_gradient(cmap='YlOrRd', axis=1))
+    styled_heatmap = heatmap.style.background_gradient(cmap='YlOrRd', axis=None)
+    st.dataframe(styled_heatmap)
 
 # ---------- Treemap: Team Resource Distribution ----------
 def treemap_resource_distribution():
