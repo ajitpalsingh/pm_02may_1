@@ -1,5 +1,5 @@
 streamlit
 pandas
 plotly
-openpyxl
 xlsxwriter
+openai>=1.0.0
