@@ -297,7 +297,7 @@ def calendar_heatmap():
     heatmap = heatmap[sorted(heatmap.columns)]
 
     st.subheader("📆 Utilization Heatmap by Resource")
-    styled_heatmap = heatmap.style.format('{:.1f}').background_gradient(cmap='viridis', axis=None, gmap=heatmap)
+    styled_heatmap = heatmap.style.format('{:.1f}').background_gradient(cmap='viridis', axis=None, gmap=heatmap, vmin=0, vmax=heatmap.values.max())
     st.dataframe(styled_heatmap)
 
 # ---------- Treemap: Team Resource Distribution ----------
